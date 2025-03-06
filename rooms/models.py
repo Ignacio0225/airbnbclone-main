@@ -48,7 +48,7 @@ class Room(CommonModel):
     category = models.ForeignKey(
         "categories.Category",
         null=True,
-        blank="",
+        blank=True,
         on_delete=models.SET_NULL,
         related_name="rooms",
     )
