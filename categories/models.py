@@ -15,7 +15,7 @@ class Category(CommonModel):
     )
     kind = models.CharField(
         max_length=15,
-        choices=CategoryKindChoices.choices,
+        choices=CategoryKindChoices.choices
     )
 
     def __str__(self):
