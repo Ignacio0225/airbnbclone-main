@@ -1,8 +1,8 @@
 from rest_framework.serializers import ModelSerializer
-from .models import Amenity
+from .models import Perk
 
-class AmenitySerializer(ModelSerializer):
+class PerkSerializer(ModelSerializer):
 
     class Meta:
-        model = Amenity
+        model = Perk
         fields = "__all__"

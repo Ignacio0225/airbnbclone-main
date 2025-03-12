@@ -1,6 +1,8 @@
 from django.shortcuts import render
+from rest_framework.status import HTTP_204_NO_CONTENT
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.exceptions import NotFound
 from .models import Amenity
 from .serializers import AmenitySerializer
 
@@ -21,12 +23,32 @@ class Amenities(APIView):
             return Response(serializer.errors)
 
 class AmenityDetail(APIView):
-
+    #get_objects -> 유효한 pk를 받아오지 못한다면 404 에러를표시해줌
+    def get_object(self,pk):
+        try:
+            return Amenity.objects.get(pk=pk)
+        except Amenity.DoesNotExist:
+            raise NotFound
+    #urls 에서 pk 를 가져와서 get_object 에서 그 pk가 유효한지 확인후 data를 가져옴
     def get(self,request,pk):
-        pass
+        amenity = self.get_object(pk)
+        serializer = AmenitySerializer(amenity)
+        return Response(serializer.data)
 
     def put(self,request,pk):
-        pass
+        amenity = self.get_object(pk)
+        serializer = AmenitySerializer(
+            amenity,
+            data=request.data,
+            partial=True,
+        )
+        if serializer.is_valid():
+            updated_serializer = serializer.save()
+            return Response(AmenitySerializer(updated_serializer).data,)
+        else:
+            return Response(serializer.errors)
 
     def delete(self,request,pk):
-        pass
+        amenity = self.get_object(pk)
+        amenity.delete()
+        return Response(status=HTTP_204_NO_CONTENT)
