@@ -45,7 +45,7 @@ class Room(CommonModel):
         "rooms.Amenity",
         related_name="rooms",
     )
-    category = models.ForeignKey(
+    categories = models.ForeignKey(
         "categories.Category",
         null=True,
         blank=True,
@@ -66,7 +66,7 @@ class Room(CommonModel):
         count = self.reviews.count()
         if count == 0:
             return "No Reviews"
-        else:
+        else:#rating 의 카운트가 아닌 실제 점수를 가져와서 평균을 구하는방법
             total_rating = 0
             for review in self.reviews.all().values("rating"):
                 total_rating += review["rating"]

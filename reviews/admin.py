@@ -20,7 +20,7 @@ class WordFilter(admin.SimpleListFilter):
         else:
             reviews
 
-class RaitingFilter(admin.SimpleListFilter):
+class RatingFilter(admin.SimpleListFilter):
     title = "filter by rating level"
     parameter_name = "rate"
 
@@ -48,9 +48,9 @@ class ReviewAdmin(admin.ModelAdmin):
     )
     list_filter=(
         WordFilter,
-        RaitingFilter,
+        RatingFilter,
         "rating",
         "user__is_host",
-        "room__category",
+        "room__categories",
         "room__pet_friendly"
     )
