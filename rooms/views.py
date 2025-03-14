@@ -61,6 +61,15 @@ class Rooms(APIView):
         serializer = RoomListSerializer(all_room, many=True)
         return Response(serializer.data)
 
+    def post(self,request):
+        serializer = RoomDetailSerializer(data = request.data) # 모든 정보를 가져오게 위해 많은 정보를 갖고있는 클래스로 사용
+        if serializer.is_valid():
+            room = serializer.save()
+            serializer = room.data
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors)
+
 class RoomDetail(APIView):
 
     def get_object(self,pk):

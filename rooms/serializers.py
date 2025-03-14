@@ -14,7 +14,7 @@ class AmenitySerializer(ModelSerializer):
         )
 
 class RoomDetailSerializer(ModelSerializer):
-    owner = TinyUserSerializer()
+    owner = TinyUserSerializer(read_only= True) #user 정보를 직접 입력 할수없게 읽기전용으로 변경
     amenities = AmenitySerializer(many=True)
     categories = CategorySerializer()
 
