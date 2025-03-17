@@ -3,6 +3,7 @@ from rest_framework.serializers import ModelSerializer
 from rest_framework import serializers
 from .models import Amenity, Room
 from users.serializer import TinyUserSerializer
+from reviews.serializers import ReviewSerializer
 from categories.serializers import CategorySerializer
 
 
@@ -11,6 +12,7 @@ class AmenitySerializer(ModelSerializer):
     class Meta:
         model = Amenity
         fields = (
+            "pk",
             "name",
             "description",
         )
@@ -27,6 +29,7 @@ class RoomDetailSerializer(ModelSerializer):
         read_only=True,
     )
     review_rating = serializers.SerializerMethodField()
+    is_owner = serializers.SerializerMethodField()
 
     class Meta:
         model = Room
@@ -35,12 +38,17 @@ class RoomDetailSerializer(ModelSerializer):
     # def create(self, validated_data):
     #     return
 
-
     #메서드 이름은 반드시 속성 이름 앞에 get_을 붙여줘야함, 두번째 인자는 현재 선택돼있는 방을 의미함
     def get_review_rating(self,room):
+
         #Room.models 에서 rating  함수를 가져와서 room.에 넣어줌 (두번째인자안에)
         return room.rating()
-
+    # 클래스 안에 is_owner 속성을 만든후 True,False 확인 (views.py RoomDetail 클래스
+    # get 메서드에 context={"request":request} 추가)
+    # 유저 인증과 같은 개념, owner == user 가 True 일경우 edit 버튼을 추가 할 수 있음
+    def get_is_owner(self,room):
+        request = self.context['request']
+        return room.owner == request.user
 
 
     # #.save(owner=request.user)를 통해  requset 에서 user 데이터를 받아와서  validated_data 에 저장해줌
@@ -50,6 +58,7 @@ class RoomDetailSerializer(ModelSerializer):
 
 class RoomListSerializer(ModelSerializer):
     review_rating = serializers.SerializerMethodField()
+    is_owner = serializers.SerializerMethodField()
 
     class Meta:
         model = Room
@@ -60,7 +69,12 @@ class RoomListSerializer(ModelSerializer):
             "city",
             "price",
             "review_rating",
+            'is_owner',
         )
 
     def get_review_rating(self,room):
         return room.rating()
+
+    def get_is_owner(self,room):
+        request = self.context['request']
+        return room.owner == request.user

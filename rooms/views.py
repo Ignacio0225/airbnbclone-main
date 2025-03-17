@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.conf import settings
 #사용할 수 있는 status code들이 있음
 from rest_framework.status import HTTP_204_NO_CONTENT
 from rest_framework.views import APIView
@@ -9,6 +9,8 @@ from rest_framework.exceptions import NotFound, NotAuthenticated, ParseError, Pe
 from .models import Amenity, Room
 from categories.models import Category
 from .serializers import AmenitySerializer, RoomListSerializer, RoomDetailSerializer
+from reviews.serializers import ReviewSerializer
+from medias.serializers import PhotoSerializer
 
 # Create your views here.
 
@@ -57,18 +59,21 @@ class AmenityDetail(APIView):
         amenity.delete()
         return Response(status=HTTP_204_NO_CONTENT)
 
-
 class Rooms(APIView):
 
     def get(self,request):
         all_room = Room.objects.all()
-        serializer = RoomListSerializer(all_room, many=True)
+        serializer = RoomListSerializer(
+            all_room,
+            many=True,
+            context={'request':request},
+        )
         return Response(serializer.data)
 
     def post(self,request):
         # request를 보낸 유저가 로그인중인지 확인 로그인 하지 않았다면 오류 메세지를 전달함 (장고는 request에서 자동으로 유저 정보를 가져와줌)
         if request.user.is_authenticated:
-            # 모든 정보를 가져오게 위해 많은 정보를 갖고있는 클래스로 사용
+            # 모든 정보를 가져오기 위해 많은 정보를 갖고있는 클래스로 사용
             serializer = RoomDetailSerializer(data = request.data)
             if serializer.is_valid():
                 #post 요청한 requst에서 categroy를 가져오기 위해 설정 category는 사용자가 숫자로 post 하기 때문에 결국 숫자를 가져온다는말
@@ -100,8 +105,9 @@ class Rooms(APIView):
                             amenity = Amenity.objects.get(pk=amenity_pk)
                             #.add를 하므로써 자동으로 저장됨 .save가 필요 없음
                             room.amenities.add(amenity)
-                        serializer = RoomDetailSerializer(room)
+                        serializer = RoomDetailSerializer(room,context={'request':request})
                         return Response(serializer.data)
+
                 except Exception:
                     raise ParseError("Amenity not found")
             else:
@@ -121,7 +127,11 @@ class RoomDetail(APIView):
 
     def get(self,request,pk):
         room = self.get_object(pk)
-        serializer = RoomDetailSerializer(room)
+        # context 를 추가 할 수 있음 serializer에도 get_으로 추가
+        # 로그인 한사람이 이 방의 주인인지 아닌지 확인 유저 인증과 같은 개념, owner가 True 일경우 edit 버튼을 추가 할 수 있음
+        serializer = RoomDetailSerializer(
+            room,
+            context={"request":request})
         return Response(serializer.data)
 
     def put(self,request,pk):
@@ -137,16 +147,20 @@ class RoomDetail(APIView):
             data = request.data,
             partial=True,
         )
+
         if serializer.is_valid():
             category_pk = request.data.get("category")
+
             if not category_pk:
                 raise ParseError("Category is required")
+
             try:
                 category = Category.objects.get(pk = category_pk)
                 if category.kind == Category.CategoryKindChoices.EXPERIENCES:
                     raise ParseError("The Category kind should be 'ROOMS'")
             except Category.DoesNotExist:
                 raise ParseError("Category not found")
+
             try:
                 with transaction.atomic():
                     room = serializer.save(
@@ -160,6 +174,7 @@ class RoomDetail(APIView):
                     return Response(serializer.data)
             except Exception:
                 raise ParseError("Amenity not found")
+
         else:
             return Response(serializer.errors)
 
@@ -175,3 +190,79 @@ class RoomDetail(APIView):
 
         room.delete()
         return Response(status=HTTP_204_NO_CONTENT)
+
+class RoomReviews(APIView):
+
+    def get_object(self, pk):
+        try:
+            return Room.objects.get(pk=pk)
+        except Room.DoesNotExist:
+            raise NotFound
+
+    def get(self,request,pk):
+        #page를 정수가 아닌것으로 입력 했을 경우 page 1로 보내주는 try를 만듦
+        try:
+            page = request.query_params.get('page', 1)
+            #page 번호를 문자열로 받아오기때문에 수동으로 정수형으로 바꿔줌
+            page = int(page)
+        except ValueError:
+            page = 1
+        page_size = 3
+        start = (page -1) * page_size
+        end = start + page_size
+        #page를 찾지 못하면 자동으로 기본으로 page 1 로 이동
+        room =self.get_object(pk)
+        #보여줄 serializer (ReviewSerializer)로 가져옴
+        serializer = ReviewSerializer(
+            #0부터 3전까지만 로딩 하게 해줌
+            room.reviews.all()[start:end],
+            many=True,
+        )
+        return Response(serializer.data)
+
+class RoomAmenities(APIView):
+
+    def get_object(self, pk):
+        try:
+            return Room.objects.get(pk=pk)
+        except Room.DoesNotExist:
+            raise NotFound
+
+    def get(self,request,pk):
+        try:
+            page = request.query_params.get('page',1)
+            page = int(page)
+        except ValueError:
+            page = 1
+        page_size = settings.PAGE_SIZE
+        start = (page - 1) * page_size
+        end = start + page_size
+        room = self.get_object(pk)
+        serializer = AmenitySerializer(
+            room.amenities.all()[start:end],
+            many=True,
+        )
+        return Response(serializer.data)
+
+class RoomPhotos(APIView):
+    def get_object(self,pk):
+        try:
+            return Room.objects.get(pk = pk)
+        except Room.DoesNotExist:
+            raise NotFound
+
+    def post(self,request,pk):
+        room = self.get_object(pk)
+        if not request.user.is_authenticated:
+            raise NotAuthenticated
+        if request.user != room.owner:
+            raise PermissionDenied
+        serializer = PhotoSerializer(data=request.data)
+        if serializer.is_valid():
+            photo = serializer.save(
+                room=room
+            )
+            serializer = PhotoSerializer(photo)
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors)
