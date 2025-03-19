@@ -1,16 +1,24 @@
+#장고 유틸리티로 시간 관련 된것은 이거쓰는게 좋음
+from tabnanny import check
+
+from django.utils import timezone
 from django.conf import settings
 #사용할 수 있는 status code들이 있음
 from rest_framework.status import HTTP_204_NO_CONTENT
 from rest_framework.views import APIView
 from django.db import transaction
+from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 #exceptions 는 에러들을 모아둠
 from rest_framework.exceptions import NotFound, NotAuthenticated, ParseError, PermissionDenied
 from .models import Amenity, Room
 from categories.models import Category
+from booking.models import Booking
 from .serializers import AmenitySerializer, RoomListSerializer, RoomDetailSerializer
 from reviews.serializers import ReviewSerializer
 from medias.serializers import PhotoSerializer
+from booking.serializers import PublicBookingSerializer,CreateRoomBookingSerializer
+
 
 # Create your views here.
 
@@ -60,6 +68,9 @@ class AmenityDetail(APIView):
         return Response(status=HTTP_204_NO_CONTENT)
 
 class Rooms(APIView):
+
+    #GET은 읽기전용으로 인증 없이 확인가능 POST,PUT,DELETE는 인증 해줌(전역변수)
+    # permission_classes = [IsAuthenticatedOrReadOnly]
 
     def get(self,request):
         all_room = Room.objects.all()
@@ -193,6 +204,8 @@ class RoomDetail(APIView):
 
 class RoomReviews(APIView):
 
+    permission_classes = [IsAuthenticatedOrReadOnly]
+
     def get_object(self, pk):
         try:
             return Room.objects.get(pk=pk)
@@ -220,6 +233,19 @@ class RoomReviews(APIView):
         )
         return Response(serializer.data)
 
+    def post(self,request,pk):
+        serializer = ReviewSerializer(data = request.data)
+        if serializer.is_valid():
+            reviews =serializer.save(
+                #유저를 바꿀수 없게 접속된 유저로 설정
+                user = request.user,
+                #어느 방에 작성할건지를 설정하게 해줌 (보이지는 않지만 db에는 연결돼서 저장됨)
+                room = self.get_object(pk)
+            )
+            serializer = ReviewSerializer(reviews)
+            return Response(serializer.data)
+
+
 class RoomAmenities(APIView):
 
     def get_object(self, pk):
@@ -245,6 +271,7 @@ class RoomAmenities(APIView):
         return Response(serializer.data)
 
 class RoomPhotos(APIView):
+
     def get_object(self,pk):
         try:
             return Room.objects.get(pk = pk)
@@ -263,6 +290,55 @@ class RoomPhotos(APIView):
                 room=room
             )
             serializer = PhotoSerializer(photo)
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors)
+
+class RoomBookings(APIView):
+
+    permission_classes = [IsAuthenticatedOrReadOnly]
+
+    def get_object(self,pk):
+        try:
+            return Room.objects.get(pk=pk)
+        except Room.DoesNotExist:
+            raise NotFound
+
+    def get(self,request,pk):
+
+        # user(요청자)가 존재하지 않는 room에 대한 예약을 요청하면 room이 존재하지 않는다고 안내 할 수 있음 (DoesNotExist)
+        room = self.get_object(pk)
+        #현재 현지 시간 확인 방법 .date()는 시간을 제외한 날짜만
+        now = timezone.localtime(timezone.now()).date()
+        booking = Booking.objects.filter(
+            room = room,
+            kind = Booking.BookingKindChoices.ROOM,
+            #check_in 날짜보다 gte(큰) 것만 필터
+            check_in__gte=now,
+        )
+        serializer = PublicBookingSerializer(booking,many=True)
+        return Response(serializer.data)
+
+        # ------------------다른방법-----------------
+        # 반드시 user(요청자)가 존재 하는 room의 room__pk를 입력 한다고 하면 아래처럼 작성
+        # user가 방이 없는 상황이라도 예약이 안됐다고 생각할 수있음
+        # ORM 필터 해서 바로 room__pk를 방을 찾을 수 있음
+        # booking = Booking.objects.filter(room__pk = pk)
+
+    def post(self,request,pk):
+        room = self.get_object(pk)
+        serializer = CreateRoomBookingSerializer(data = request.data)
+        if serializer.is_valid():
+            #현재 날짜 이후로 부킹 할수있게 하는방법 (만약 과거 날짜로 시간을 지정한다면 에러)
+            # 방법1 check_in = request.data.get('check_in') # 이후 if-else로 날짜 비교하여 입력 가능
+            # 방법2 booking.serializers.py에 is_valid 를 검사 할수 있는 로직을 써서 여기서는 pass로 진행
+            booking = serializer.save(
+                room=room,
+                user=request.user,
+                kind=Booking.BookingKindChoices.ROOM,
+            )
+            #저장할때는 일반으로 보여주는 시리얼라이져 사용
+            serializer = PublicBookingSerializer(booking)
             return Response(serializer.data)
         else:
             return Response(serializer.errors)

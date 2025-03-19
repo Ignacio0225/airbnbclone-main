@@ -138,8 +138,12 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTH_USER_MODEL = 'users.User'
 
+#사진을 저장할 폴더를 만들어줌
 MEDIA_ROOT ='uploads'
 
+#사진을 저장할 URL을 만들어줌 , 클라우드서비스
 MEDIA_URL = 'user-uploads/'
+
+#+static(settings.MEDIA_URL,document_root=settings.MEDIA_ROOT) urlpatterns 리스트 외부에 추가
 
 PAGE_SIZE = 3

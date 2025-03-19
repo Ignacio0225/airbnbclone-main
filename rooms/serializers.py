@@ -1,3 +1,4 @@
+from django.template.context_processors import request
 from rest_framework.serializers import ModelSerializer
 #위에랑 중복 될 수 있음
 from rest_framework import serializers
@@ -5,6 +6,8 @@ from .models import Amenity, Room
 from users.serializer import TinyUserSerializer
 from reviews.serializers import ReviewSerializer
 from categories.serializers import CategorySerializer
+from medias.serializers import PhotoSerializer
+from wishlists.models import Wishlist
 
 
 class AmenitySerializer(ModelSerializer):
@@ -30,6 +33,8 @@ class RoomDetailSerializer(ModelSerializer):
     )
     review_rating = serializers.SerializerMethodField()
     is_owner = serializers.SerializerMethodField()
+    is_liked = serializers.SerializerMethodField()
+    photos = PhotoSerializer(many=True,read_only=True)
 
     class Meta:
         model = Room
@@ -50,6 +55,11 @@ class RoomDetailSerializer(ModelSerializer):
         request = self.context['request']
         return room.owner == request.user
 
+    #현재 클래스의 serializer가 사용되는 views.py에서 연결된 object를 room(2번째인자에 넣어줌)
+    def get_is_liked(self,room):
+        request = self.context['request']
+        return Wishlist.objects.filter(user = request.user, rooms__pk=room.pk).exists()
+
 
     # #.save(owner=request.user)를 통해  requset 에서 user 데이터를 받아와서  validated_data 에 저장해줌
     # def create(self, validated_data):
@@ -59,6 +69,7 @@ class RoomDetailSerializer(ModelSerializer):
 class RoomListSerializer(ModelSerializer):
     review_rating = serializers.SerializerMethodField()
     is_owner = serializers.SerializerMethodField()
+    photos = PhotoSerializer(many=True,read_only=True)
 
     class Meta:
         model = Room
@@ -70,6 +81,7 @@ class RoomListSerializer(ModelSerializer):
             "price",
             "review_rating",
             'is_owner',
+            'photos',
         )
 
     def get_review_rating(self,room):
