@@ -147,3 +147,13 @@ MEDIA_URL = 'user-uploads/'
 #+static(settings.MEDIA_URL,document_root=settings.MEDIA_ROOT) urlpatterns 리스트 외부에 추가
 
 PAGE_SIZE = 3
+
+REST_FRAMEWORK={
+    #request.user 보다 먼저 실행됨
+    'DEFAULT_AUTHENTICATION_CLASSES':[
+        #장고 유저 인증의 기본값 (쓰지않아도 이상태)
+        'rest_framework.authentication.SessionAuthentication',
+        #위에랑 아래를 통해서 user를 찾지 못했다면 로그아웃 된상태라는의미
+        'config.authentication.TrustMeBroAuthentication'
+    ]
+}
