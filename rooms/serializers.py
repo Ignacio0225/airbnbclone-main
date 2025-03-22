@@ -21,6 +21,9 @@ class AmenitySerializer(ModelSerializer):
         )
 
 class RoomDetailSerializer(ModelSerializer):
+
+    #user = ReadOnlyField(users.User) 이런식으로 사용하면 pk가 아니라 실제 이름을 가져올 수 있음
+
     owner = TinyUserSerializer(
         read_only= True,
     ) #user 정보를 직접 입력 할수없게 읽기전용으로 변경

@@ -1,3 +1,5 @@
+import jwt
+from django.conf import settings
 from django.shortcuts import render
 from django.contrib.auth import authenticate, login, logout
 from rest_framework.response import Response
@@ -102,3 +104,26 @@ class LogOut(APIView):
     def post(self,request):
         logout(request)
         return Response({"ok":"bye!"})
+
+class JWTLogIn(APIView):
+    def post(self, request):
+        #username과  password를 잘 썼는지 확인 (없으면 에러)
+        username = request.data.get('username')
+        password = request.data.get('password')
+        if not username or not password:
+            raise ParseError
+        #authenticate 함수는 request와 함께 username과 password를 인증 하는 과정
+        #authenticate()는 로그인한 사용자 정보를 찾아서 반환합니다.
+        # 이 객체는 user 객체이며, 이후 user.pk 값을 토큰 페이로드로 사용할 수 있습니다.
+        user = authenticate(
+            request,
+            username=username,
+            password=password,
+        )
+        #user가 있으면 전달할 token에 갖고있는 pk를 암호화 해서 넘겨줌.
+        if user:
+            #수정할 수는 없지만 유저 정보를 넘겨주기 때문에 민감한 정보를 줄 수 없음
+            token = jwt.encode({"pk":user.pk},settings.SECRET_KEY,algorithm='HS256')
+            return Response({"token":token})
+        else:
+            return Response({"error": "wrong password"})

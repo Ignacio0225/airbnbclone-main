@@ -11,17 +11,21 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 from pathlib import Path
-
+import os
+import environ
 from django.conf.global_settings import AUTH_USER_MODEL
+
+env = environ.Env()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+environ.Env.read_env(os.path.join(BASE_DIR,".env"))
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-$!+mo*os1@3mgofhfzzf$3f97&(=x4zm=t@fev8u_pt1s_jxv1'
+SECRET_KEY = env("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -32,6 +36,8 @@ ALLOWED_HOSTS = []
 
 THIRD_PARTY_APPS = [
     "rest_framework",
+    #토큰 인증 서드파티, migrate 해야함 새로운 데이터베이스가 생김
+    'rest_framework.authtoken',
 ]
 
 CUSTOM_APPS = [
@@ -151,9 +157,16 @@ PAGE_SIZE = 3
 REST_FRAMEWORK={
     #request.user 보다 먼저 실행됨
     'DEFAULT_AUTHENTICATION_CLASSES':[
+        #기본 인증 (아무도 안씀, 헤더를 사용함)
+        'rest_framework.authentication.BasicAuthentication',
         #장고 유저 인증의 기본값 (쓰지않아도 이상태)
         'rest_framework.authentication.SessionAuthentication',
         #위에랑 아래를 통해서 user를 찾지 못했다면 로그아웃 된상태라는의미
-        'config.authentication.TrustMeBroAuthentication'
+        #헤더를 사용하는 베이직 인증하고 같음 방식을 커스텀해서 만듬
+        # 'config.authentication.TrustMeBroAuthentication',
+        #토큰인증 설정
+        'rest_framework.authentication.TokenAuthentication',
+        #JWT인증 설정
+        'config.authentication.JWTAuthentication',
     ]
 }
