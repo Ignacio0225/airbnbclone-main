@@ -152,10 +152,12 @@ class TestRooms(APITestCase):
     def test_create_room(self):
 
         response=self.client.post("/api/v1/rooms/")
-        self.assertEqual(response.status_code,403,"Not 403")
+        self.assertEqual(response.status_code,401,"Not 401")
 
         self.client.force_login(
             self.user
         )
         response = self.client.post("/api/v1/rooms/")
         print(response)
+
+        '/Users/yusunhyuk/Library/Mobile Documents/com~apple~CloudDocs/github/airbnbclone-main'

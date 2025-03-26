@@ -1,9 +1,11 @@
 from tabnanny import check
 
 from django.core.validators import validate_comma_separated_integer_list
+from django.db.models import DateTimeField, CharField
 from django.utils import timezone
-from rest_framework.serializers import ModelSerializer, DateField, ValidationError
+from rest_framework.serializers import ModelSerializer, DateField, ValidationError,CharField,DateTimeField
 from .models import Booking
+from experiences.serializers import ExperienceDetailSerializer
 
 class CreateRoomBookingSerializer(ModelSerializer):
 
@@ -48,6 +50,28 @@ class CreateRoomBookingSerializer(ModelSerializer):
             raise ValidationError("Those (or some) of those dates are already taken")
         return data
 
+class CreateExperienceBookingSerializer(ModelSerializer):
+    experience_time = DateTimeField()
+    experience = ExperienceDetailSerializer(read_only=True)
+    kind = CharField(read_only=True)
+
+    class Meta:
+        model=Booking
+        fields=(
+            'kind',
+            'experience',
+            'experience_time',
+            'guests',
+
+        )
+
+    def validate_experience_time(self,value):
+        now=timezone.localtime(timezone.now())
+        if now > value:
+            raise ValidationError("Can`t book in the past")
+        return value
+
+
 class PublicBookingSerializer(ModelSerializer):
 
     class Meta:
@@ -58,4 +82,13 @@ class PublicBookingSerializer(ModelSerializer):
             'check_out',
             'guests'
 
+        )
+class PublicExperienceBookingSerializer(ModelSerializer):
+    class Meta:
+        model=Booking
+        fields=(
+            'pk',
+            'experiences',
+            'experience_time',
+            'guests',
         )

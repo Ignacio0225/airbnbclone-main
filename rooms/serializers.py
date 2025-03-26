@@ -26,7 +26,7 @@ class RoomDetailSerializer(ModelSerializer):
 
     owner = TinyUserSerializer(
         read_only= True,
-    ) #user 정보를 직접 입력 할수없게 읽기전용으로 변경
+    ) #user 정보를 직접 입력 할수없게 읽기전용으로 변경, ManytoMany필드이기때문에 many=True를 꼭 써야함
     amenities = AmenitySerializer(
         read_only=True,
         many=True,

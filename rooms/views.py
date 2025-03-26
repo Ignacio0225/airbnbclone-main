@@ -315,6 +315,7 @@ class RoomBookings(APIView):
             kind = Booking.BookingKindChoices.ROOM,
             #check_in 날짜보다 gte(큰) 것만 필터
             check_in__gte=now,
+            user = request.user
         )
         serializer = PublicBookingSerializer(booking,many=True)
         return Response(serializer.data)
