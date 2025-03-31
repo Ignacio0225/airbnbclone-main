@@ -38,6 +38,8 @@ THIRD_PARTY_APPS = [
     "rest_framework",
     #토큰 인증 서드파티, migrate 해야함 새로운 데이터베이스가 생김
     'rest_framework.authtoken',
+    #frontend 에서 API 허용해주는 패키지
+    'corsheaders',
 ]
 
 CUSTOM_APPS = [
@@ -66,6 +68,8 @@ INSTALLED_APPS = CUSTOM_APPS + SYSTEM_APPS + THIRD_PARTY_APPS
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    #corsheders 추가
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -170,3 +174,6 @@ REST_FRAMEWORK={
         'config.authentication.JWTAuthentication',
     ]
 }
+
+#여기에 등록한 url에서 는 fetch를 허용해줌
+CORS_ALLOWED_ORIGINS = ['http://localhost:5173']

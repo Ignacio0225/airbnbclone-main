@@ -61,7 +61,14 @@ class RoomDetailSerializer(ModelSerializer):
     #현재 클래스의 serializer가 사용되는 views.py에서 연결된 object를 room(2번째인자에 넣어줌)
     def get_is_liked(self,room):
         request = self.context['request']
-        return Wishlist.objects.filter(user = request.user, rooms__pk=room.pk).exists()
+        # 유저가 있으면(True/False 판단 가능), 유저가 없으면 걍 False 반환해줘야 한다.
+        # 이렇게 하지않으면 에러가 나버림
+        if request.user.is_authenticated:
+            return Wishlist.objects.filter(
+                user = request.user,
+                rooms__pk=room.pk
+            ).exists()
+        return False
 
 
     # #.save(owner=request.user)를 통해  requset 에서 user 데이터를 받아와서  validated_data 에 저장해줌
